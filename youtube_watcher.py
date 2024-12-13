@@ -118,46 +118,20 @@ class WatchYouTubeVideo(TaskDispatcher):
                     headless=headless,
                     executable_path=chrome_location,
                     args=args,
-            ) as browser, browser.new_page(
-                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-            ) as page:
+            ) as browser:
                 for url in urls:
-                    try:
-                        page.goto(url)
+                    with browser.new_page(
+                        user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                    ) as page:
+                        try:
+                            page.goto(url)
 
-                        video = page.locator('#movie_player').element_handle()
+                            video = page.locator('#movie_player').element_handle()
 
-                        player_status = video.evaluate('element => element?.getPlayerState()')
-                        if player_status is None:
-                            # return Failure("Failed to get player status")
-                            pass
-
-                        for _ in range(60):
-                            try:
-                                player_status = video.evaluate('element => element?.getPlayerState()')
-                                if player_status == YouTubeIFrameStatus.PLAYING:
-                                    break
-                                for button in video.query_selector_all('[id^="skip-button"]'):
-                                    button.click()
-                                time.sleep(2)
-                            except Exception as e:
-                                print(e)
-
-                        if player_status != YouTubeIFrameStatus.PLAYING:
-                            # return Failure("Couldn't start the video: unknown error")
-                            print("Couldn't start the video: unknown error")
-
-                        while player_status == YouTubeIFrameStatus.BUFFERING:
-                            time.sleep(1)
                             player_status = video.evaluate('element => element?.getPlayerState()')
-
-                        if player_status in {
-                            YouTubeIFrameStatus.UNSTARTED,
-                            YouTubeIFrameStatus.CUED,
-                            YouTubeIFrameStatus.PAUSED,
-                        }:
-                            video.type(" ")
-                            time.sleep(2)
+                            if player_status is None:
+                                # return Failure("Failed to get player status")
+                                pass
 
                             for _ in range(60):
                                 try:
@@ -174,22 +148,49 @@ class WatchYouTubeVideo(TaskDispatcher):
                                 # return Failure("Couldn't start the video: unknown error")
                                 print("Couldn't start the video: unknown error")
 
-                        if duration:
-                            time.sleep(duration)
-                            result = Success(f"Video finished by timeout: {duration} seconds")
-                        else:
-                            while player_status != YouTubeIFrameStatus.ENDED:
-                                while player_status != YouTubeIFrameStatus.PLAYING:
-                                    player_status = video.evaluate('element => element?.getPlayerState()')
-                                    for button in video.query_selector_all('[id^="skip-button:2"]'):
-                                        button.click()
-                                    time.sleep(2)
-                                time.sleep(2)
+                            while player_status == YouTubeIFrameStatus.BUFFERING:
+                                time.sleep(1)
                                 player_status = video.evaluate('element => element?.getPlayerState()')
-                            result = Success("Video finished by reaching the end")
 
-                    except Exception as e:
-                        print(e)
+                            if player_status in {
+                                YouTubeIFrameStatus.UNSTARTED,
+                                YouTubeIFrameStatus.CUED,
+                                YouTubeIFrameStatus.PAUSED,
+                            }:
+                                video.type(" ")
+                                time.sleep(2)
+
+                                for _ in range(60):
+                                    try:
+                                        player_status = video.evaluate('element => element?.getPlayerState()')
+                                        if player_status == YouTubeIFrameStatus.PLAYING:
+                                            break
+                                        for button in video.query_selector_all('[id^="skip-button"]'):
+                                            button.click()
+                                        time.sleep(2)
+                                    except Exception as e:
+                                        print(e)
+
+                                if player_status != YouTubeIFrameStatus.PLAYING:
+                                    # return Failure("Couldn't start the video: unknown error")
+                                    print("Couldn't start the video: unknown error")
+
+                            if duration:
+                                time.sleep(duration)
+                                result = Success(f"Video finished by timeout: {duration} seconds")
+                            else:
+                                while player_status != YouTubeIFrameStatus.ENDED:
+                                    while player_status != YouTubeIFrameStatus.PLAYING:
+                                        player_status = video.evaluate('element => element?.getPlayerState()')
+                                        for button in video.query_selector_all('[id^="skip-button:2"]'):
+                                            button.click()
+                                        time.sleep(2)
+                                    time.sleep(2)
+                                    player_status = video.evaluate('element => element?.getPlayerState()')
+                                result = Success("Video finished by reaching the end")
+
+                        except Exception as e:
+                            print(e)
 
             return result
 

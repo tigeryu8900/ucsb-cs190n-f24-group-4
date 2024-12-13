@@ -60,7 +60,7 @@ class WatchVimeoVideo(TaskDispatcher):
         headless: bool = True,
         processes: Optional[list[subprocess.Popen]] = None
     ) -> Result[str, str]:
-        from playwright.sync_api import sync_playwright
+        from playwright.async_api import async_playwright
 
         procs = [] if processes is None else [subprocess.Popen(
             process,
@@ -94,56 +94,57 @@ class WatchVimeoVideo(TaskDispatcher):
 
             result = Success("No videos.")
 
-            with sync_playwright() as p, p.chromium.launch(
+            with async_playwright() as p, p.chromium.launch(
                 headless=headless,
                 executable_path=chrome_location,
                 args=args,
-            ) as browser, browser.new_page(
-                user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-            ) as page:
+            ) as browser:
                 for url in urls:
-                    page.goto(url)
+                    with browser.new_page(
+                        user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                    ) as page:
+                        page.goto(url)
 
-                    try:
-                        paused = page.locator('video').first.evaluate('element => element.paused')
-                        if paused is None:
-                            # return Failure("Failed to get video status")
-                            print("Failed to get video status")
-
-                        for _ in range(5):
-                            try:
-                                page.locator('video').first.evaluate('''function (element) {
-                                    const isPlaying = element.currentTime > 0 && !element.paused && !element.ended 
-                                        && element.readyState > element.HAVE_CURRENT_DATA;
-            
-                                    if (!isPlaying) {
-                                      element.play();
-                                    }
-                                }''')
-                                time.sleep(2)
-                                paused = page.locator('video').first.evaluate('element => element.paused')
-                                time.sleep(2)
-                                if not paused:
-                                    break
-                            except Exception as e:
-                                print(e)
-
-                        if paused:
-                            # return Failure("Couldn't start the video: unknown error")
-                            print("Couldn't start the video: unknown error")
-
-                        if duration:
-                            time.sleep(duration)
-                            result = Success(f"Video finished by timeout: {duration} seconds")
-                        else:
+                        try:
                             paused = page.locator('video').first.evaluate('element => element.paused')
-                            while not paused:
-                                time.sleep(2)
-                                paused = page.locator('video').first.evaluate('element => element.paused')
-                            result = Success("Video finished by reaching the end")
+                            if paused is None:
+                                # return Failure("Failed to get video status")
+                                print("Failed to get video status")
 
-                    except Exception as e:
-                        print(e)
+                            for _ in range(5):
+                                try:
+                                    page.locator('video').first.evaluate('''function (element) {
+                                        const isPlaying = element.currentTime > 0 && !element.paused && !element.ended 
+                                            && element.readyState > element.HAVE_CURRENT_DATA;
+                
+                                        if (!isPlaying) {
+                                          element.play();
+                                        }
+                                    }''')
+                                    time.sleep(2)
+                                    paused = page.locator('video').first.evaluate('element => element.paused')
+                                    time.sleep(2)
+                                    if not paused:
+                                        break
+                                except Exception as e:
+                                    print(e)
+
+                            if paused:
+                                # return Failure("Couldn't start the video: unknown error")
+                                print("Couldn't start the video: unknown error")
+
+                            if duration:
+                                time.sleep(duration)
+                                result = Success(f"Video finished by timeout: {duration} seconds")
+                            else:
+                                paused = page.locator('video').first.evaluate('element => element.paused')
+                                while not paused:
+                                    time.sleep(2)
+                                    paused = page.locator('video').first.evaluate('element => element.paused')
+                                result = Success("Video finished by reaching the end")
+
+                        except Exception as e:
+                            print(e)
 
             return result
 

@@ -2,7 +2,8 @@ import os
 import time
 from typing import Union
 
-from netunicorn.base import Pipeline, ExperimentExecutionInformation, Experiment, DockerImage, ExperimentStatus
+from netunicorn.base import Pipeline, ExperimentExecutionInformation, Experiment, DockerImage, ExperimentStatus, \
+    Architecture
 from netunicorn.client.remote import RemoteClientException, RemoteClient
 
 netunicorn_login = 'cs190n4'
@@ -14,7 +15,9 @@ NETUNICORN_PASSWORD = os.environ.get('NETUNICORN_PASSWORD', netunicorn_password)
 
 client = RemoteClient(endpoint=NETUNICORN_ENDPOINT, login=NETUNICORN_LOGIN, password=NETUNICORN_PASSWORD)
 nodes = client.get_nodes()
-
+# for pool in nodes:
+#     for node in pool:
+#         node.architecture = Architecture.LINUX_ARM64
 
 def healthcheck():
     print("Health Check: {}".format(client.healthcheck()))
@@ -70,7 +73,7 @@ def execute_pipeline(
 
 
 if __name__ == '__main__':
-    # healthcheck()
-    info = client.get_experiment_status("team-4-experiment-3")
-    print(info)
+    healthcheck()
+    # info = client.get_experiment_status("team-4-experiment-3")
+    # print(info)
 
