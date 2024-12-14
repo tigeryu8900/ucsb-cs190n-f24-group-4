@@ -12,5 +12,7 @@ background network noise.
 
 The data collection part is in this Jupyter Notebook: in this Jupter Notebook:  [here](./Data%20Collection.ipynb)
 
+* Part 2
+
 The model and evaluation is in this Jupter Notebook:  [here](./model.ipynb)
 
